@@ -3,172 +3,99 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flip Clock (HH:MM)</title>
+  <title>Clock (HH:MM)</title>
 
   <style>
     :root{
-      --card:#111;
-      --fg:#fff;
-      --line:#2a2a2a;
+      /* 카드 크기: 유동형 */
+      --w: clamp(44px, 9.5vw, 60px);
+      --h: calc(var(--w) * 1.55);
 
-      /* 노션 배경이 흰색일 때 콜론이 잘 보이도록 */
-      --sep:#111;
+      /* 간격(요청: 더 좁게) */
+      --gap-digit: 5px;   /* 같은 그룹(시, 분) 안 카드 간격 */
+      --gap-mid: 6px;     /* 시:분 사이(콜론 포함) 전체 간격 */
 
-      --muted:#8b8b8b;
-
-      /* ✅ 유동형 크기: 폭은 줄이고, 높이는 더 길게 */
-      --cardW: clamp(52px, 10.5vw, 68px);
-      --cardH: calc(var(--cardW) * 1.85); /* 세로 길이 늘림 */
+      /* 색 */
+      --card: #111;
+      --fg: #fff;
+      --sep: #111;     /* 노션 흰 배경 기준 */
+      --muted: #777;
     }
 
     html, body{
-      height:100%;
-      margin:0;
+      height: 100%;
+      margin: 0;
       background: transparent;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
 
     .wrap{
-      width:100%;
-      height:100%;
-      min-height: 170px; /* 세로 여유(임베드에서 잘리지 않게) */
-      display:flex;
-      align-items:center;
-      justify-content:center;
+      width: 100%;
+      height: 100%;
+      min-height: 140px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       padding: 8px 0;
-      box-sizing:border-box;
+      box-sizing: border-box;
     }
 
     .clock{
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      gap: 8px; /* ✅ 그룹 사이 간격 좁힘 */
-      transform-origin:center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--gap-mid);
     }
 
     .group{
-      display:flex;
-      gap: 6px; /* ✅ 카드 사이 간격 좁힘 */
-      align-items:center;
+      display: flex;
+      align-items: center;
+      gap: var(--gap-digit);
     }
 
-    /* ✅ 콜론 확실히 보이게 + 간격 좁힘 */
-    .sep{
-      font-size: calc(var(--cardH) * 0.42);
-      font-weight: 900;
-      line-height: 1;
-      color: var(--sep);
-      user-select:none;
-      margin: 0 2px; /* ✅ 콜론 주변 간격 좁힘 */
-      transform: translateY(-2px);
-    }
-
-    /* ✅ 카드(1칸=1숫자) */
+    /* ✅ 한 카드 = 숫자 1개만 */
     .card{
-      width: var(--cardW);
-      height: var(--cardH);
-      position: relative;
+      width: var(--w);
+      height: var(--h);
+      background: var(--card);
       border-radius: 14px;
-      background: var(--card);
-      box-shadow: 0 10px 25px rgba(0,0,0,.22);
-      overflow:hidden;
-      perspective: 900px;
-
-      --half: calc(var(--cardH) / 2);
-      --shift: calc(var(--half) / 2);
+      box-shadow: 0 10px 20px rgba(0,0,0,.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
     }
 
-    .card::after{
-      content:"";
-      position:absolute;
-      left:0; right:0;
-      top:50%;
-      height:1px;
-      background: var(--line);
-      transform: translateY(-0.5px);
-      z-index: 6;
-    }
-
-    .top, .bottom{
-      position:absolute;
-      left:0;
-      width:100%;
-      height: var(--half);
-      overflow:hidden;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      z-index: 2;
-    }
-
-    .top{
-      top:0;
-      background: rgba(255,255,255,0.02);
-    }
-    .bottom{
-      bottom:0;
-      background: rgba(0,0,0,0.06);
-    }
-
-    /* ✅ 숫자: 카드 크기에 따라 자동 스케일 */
     .digit{
-      font-size: calc(var(--cardH) * 0.62);
-      font-weight: 900;
       color: var(--fg);
-      letter-spacing: 0.5px;
+      font-weight: 900;
       font-variant-numeric: tabular-nums;
-      user-select:none;
       line-height: 1;
-      position: relative;
+      /* 카드 높이에 비례해서 폰트가 자동으로 맞춰짐 */
+      font-size: calc(var(--h) * 0.66);
+      letter-spacing: 0.5px;
+      transform: translateY(-1px);
+      user-select: none;
     }
 
-    /* 상단/하단에서 숫자가 “한 개처럼” 보이도록 정렬 */
-    .top .digit { top: var(--shift); }
-    .bottom .digit { top: calc(var(--shift) * -1); }
-
-    /* 플립 레이어 */
-    .top-flip, .bottom-flip{
-      position:absolute;
-      left:0;
-      width:100%;
-      height: var(--half);
-      overflow:hidden;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      backface-visibility: hidden;
-      z-index: 5;
-      pointer-events:none;
-      background: var(--card);
+    /* ✅ 콜론: 시/분 사이 간격 더 좁게 */
+    .sep{
+      color: var(--sep);
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+      font-size: calc(var(--h) * 0.55);
+      margin: 0 -2px; /* 콜론 주변을 더 좁혀줌 */
+      transform: translateY(-1px);
+      user-select: none;
     }
-
-    .top-flip{
-      top:0;
-      transform-origin: bottom;
-      transform: rotateX(0deg);
-    }
-    .bottom-flip{
-      bottom:0;
-      transform-origin: top;
-      transform: rotateX(90deg);
-    }
-
-    .top-flip .digit { top: var(--shift); }
-    .bottom-flip .digit { top: calc(var(--shift) * -1); }
-
-    @keyframes flipDown{ to { transform: rotateX(-90deg); } }
-    @keyframes flipUp{ to { transform: rotateX(0deg); } }
-
-    .flip .top-flip{ animation: flipDown 260ms ease-in forwards; }
-    .flip .bottom-flip{ animation: flipUp 260ms ease-out forwards; }
 
     .meta{
       margin-top: 8px;
-      text-align:center;
+      text-align: center;
       font-size: 12px;
       color: var(--muted);
-      user-select:none;
+      user-select: none;
     }
   </style>
 </head>
@@ -176,17 +103,17 @@
 <body>
   <div class="wrap">
     <div>
-      <div class="clock" id="clock">
+      <div class="clock" aria-label="digital clock">
         <div class="group">
-          <div class="card" data-key="h1"></div>
-          <div class="card" data-key="h2"></div>
+          <div class="card"><div class="digit" id="h1">0</div></div>
+          <div class="card"><div class="digit" id="h2">0</div></div>
         </div>
 
         <div class="sep">:</div>
 
         <div class="group">
-          <div class="card" data-key="m1"></div>
-          <div class="card" data-key="m2"></div>
+          <div class="card"><div class="digit" id="m1">0</div></div>
+          <div class="card"><div class="digit" id="m2">0</div></div>
         </div>
       </div>
 
@@ -197,74 +124,30 @@
   <script>
     const TZ = "Asia/Seoul";
 
-    function getTimePartsHM(){
-      const fmt = new Intl.DateTimeFormat('en-GB', {
+    function getHHMM(){
+      const fmt = new Intl.DateTimeFormat("en-GB", {
         timeZone: TZ,
         hour12: false,
-        hour: '2-digit',
-        minute: '2-digit'
+        hour: "2-digit",
+        minute: "2-digit",
       });
-      const s = fmt.format(new Date()).replace(/\u200e/g,''); // "HH:MM"
-      const [hh, mm] = s.split(':');
+      const s = fmt.format(new Date()).replace(/\u200e/g, ""); // "HH:MM"
+      const [hh, mm] = s.split(":");
       return { hh, mm };
     }
 
-    function buildCard(el, initial){
-      el.innerHTML = `
-        <div class="top"><div class="digit">${initial}</div></div>
-        <div class="bottom"><div class="digit">${initial}</div></div>
-
-        <div class="top-flip"><div class="digit">${initial}</div></div>
-        <div class="bottom-flip"><div class="digit">${initial}</div></div>
-      `;
-      el.dataset.value = initial;
+    function render(){
+      const { hh, mm } = getHHMM();
+      const d = (hh + mm).split(""); // h1 h2 m1 m2
+      document.getElementById("h1").textContent = d[0];
+      document.getElementById("h2").textContent = d[1];
+      document.getElementById("m1").textContent = d[2];
+      document.getElementById("m2").textContent = d[3];
     }
 
-    function setDigit(el, next){
-      const prev = el.dataset.value;
-      if (prev === next) return;
-
-      const topDigit = el.querySelector('.top .digit');
-      const bottomDigit = el.querySelector('.bottom .digit');
-      const topFlipDigit = el.querySelector('.top-flip .digit');
-      const bottomFlipDigit = el.querySelector('.bottom-flip .digit');
-
-      topDigit.textContent = prev;
-      bottomDigit.textContent = next;
-      topFlipDigit.textContent = prev;
-      bottomFlipDigit.textContent = next;
-
-      el.classList.remove('flip');
-      void el.offsetWidth; // reflow
-      el.classList.add('flip');
-
-      setTimeout(() => {
-        topDigit.textContent = next;
-        bottomDigit.textContent = next;
-        el.dataset.value = next;
-        el.classList.remove('flip');
-      }, 280);
-    }
-
-    const cards = {};
-    document.querySelectorAll('.card').forEach(el => {
-      cards[el.dataset.key] = el;
-      buildCard(el, '0');
-    });
-
-    document.getElementById('meta').textContent = TZ;
-
-    function tick(){
-      const { hh, mm } = getTimePartsHM();
-      const d = (hh + mm).split(''); // h1 h2 m1 m2
-      setDigit(cards.h1, d[0]);
-      setDigit(cards.h2, d[1]);
-      setDigit(cards.m1, d[2]);
-      setDigit(cards.m2, d[3]);
-    }
-
-    tick();
-    setInterval(tick, 1000);
+    document.getElementById("meta").textContent = TZ;
+    render();
+    setInterval(render, 1000); // 분만 보이지만 1초마다 갱신(부담 거의 없음)
   </script>
 </body>
 </html>
