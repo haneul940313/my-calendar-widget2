@@ -3,10 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flip Clock</title>
+  <title>Flip Clock (HH:MM)</title>
   <style>
     :root{
-      --bg:#000;
       --fg:#fff;
       --card:#111;
       --line:#2a2a2a;
@@ -20,11 +19,10 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
 
-    /* Notion 임베드 폭에 맞춰 자동 스케일 */
     .wrap{
       width:100%;
       height:100%;
-      min-height: 140px;
+      min-height: 130px;
       display:flex;
       align-items:center;
       justify-content:center;
@@ -39,7 +37,6 @@
       transform-origin:center;
     }
 
-    /* 화면이 좁으면 살짝 축소 */
     @media (max-width: 420px){
       .clock{ transform: scale(0.92); }
     }
@@ -63,14 +60,19 @@
       user-select:none;
     }
 
+    /* ✅ 1카드=1숫자 (카드 안에 숫자 1개만 보이도록) */
     .card{
-      width: 88px;
+      width: 92px;
       height: 120px;
       position: relative;
       border-radius: 14px;
       background: var(--card);
       box-shadow: 0 10px 25px rgba(0,0,0,.28);
       overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      perspective: 900px; /* flip 3D */
     }
 
     /* 가운데 접히는 라인 */
@@ -86,14 +88,13 @@
       z-index: 3;
     }
 
-    .half{
+    .face{
       position:absolute;
-      left:0; right:0;
-      height:50%;
+      inset:0;
       display:flex;
       align-items:center;
       justify-content:center;
-      font-size: 64px;
+      font-size: 70px;
       font-weight: 800;
       color: var(--fg);
       letter-spacing: 1px;
@@ -101,47 +102,61 @@
       font-variant-numeric: tabular-nums;
     }
 
+    /* 위/아래 하프는 "클립"으로 잘라서 보이게 함 */
+    .top, .bottom{
+      position:absolute;
+      left:0; right:0;
+      height:50%;
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index: 2;
+    }
     .top{
       top:0;
       background: rgba(255,255,255,0.02);
-      z-index:2;
     }
     .bottom{
       bottom:0;
       background: rgba(0,0,0,0.06);
-      z-index:1;
+    }
+    .top .face{
+      transform: translateY(25%); /* 가운데 기준 맞춤 */
+    }
+    .bottom .face{
+      transform: translateY(-25%);
     }
 
-    /* 플립 애니메이션용 오버레이(앞면) */
-    .flip{
+    /* 플립 애니메이션 파트 */
+    .flip-top{
       position:absolute;
       left:0; right:0;
       top:0;
       height:50%;
+      overflow:hidden;
       transform-origin: bottom;
       backface-visibility: hidden;
       z-index: 5;
     }
-    .flip .half{
-      position:static;
-      height:100%;
+    .flip-top .face{
+      transform: translateY(25%);
       background: var(--card);
     }
 
-    /* 아래로 넘어오는 애니메이션용(뒷면) */
-    .flip2{
+    .flip-bottom{
       position:absolute;
       left:0; right:0;
       bottom:0;
       height:50%;
+      overflow:hidden;
       transform-origin: top;
       transform: rotateX(90deg);
       backface-visibility: hidden;
       z-index: 4;
     }
-    .flip2 .half{
-      position:static;
-      height:100%;
+    .flip-bottom .face{
+      transform: translateY(-25%);
       background: var(--card);
     }
 
@@ -154,14 +169,13 @@
       100% { transform: rotateX(0deg); }
     }
 
-    .run .flip{
+    .run .flip-top{
       animation: flipDown 260ms ease-in forwards;
     }
-    .run .flip2{
+    .run .flip-bottom{
       animation: flipUp 260ms ease-out forwards;
     }
 
-    /* 하단 작은 라벨(선택) */
     .meta{
       margin-top: 10px;
       color: var(--muted);
@@ -190,14 +204,6 @@
           <div class="card" data-key="m1"></div>
           <div class="card" data-key="m2"></div>
         </div>
-
-        <div class="sep">:</div>
-
-        <!-- SS -->
-        <div class="digit-group">
-          <div class="card" data-key="s1"></div>
-          <div class="card" data-key="s2"></div>
-        </div>
       </div>
 
       <div class="meta" id="meta">Asia/Seoul</div>
@@ -205,33 +211,27 @@
   </div>
 
   <script>
-    // ✅ 한국 시간 고정 (원하면 바꿀 수 있음)
     const TZ = "Asia/Seoul";
 
-    function two(n){ return String(n).padStart(2,'0'); }
-
-    // Intl로 타임존 적용한 시각 문자열 얻기
-    function getTimeParts(){
+    function getTimePartsHM(){
       const fmt = new Intl.DateTimeFormat('en-GB', {
         timeZone: TZ,
         hour12: false,
         hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
+        minute: '2-digit'
       });
-      // "HH:MM:SS" 형태로 뽑기
-      const s = fmt.format(new Date()).replace(/\u200e/g,''); // 일부 환경에서 생기는 표시 문자 제거
-      const [hh, mm, ss] = s.split(':');
-      return { hh, mm, ss };
+      const s = fmt.format(new Date()).replace(/\u200e/g,''); // "HH:MM"
+      const [hh, mm] = s.split(':');
+      return { hh, mm };
     }
 
-    // 카드 DOM 초기화
     function buildCard(cardEl, initialDigit){
       cardEl.innerHTML = `
-        <div class="half top">${initialDigit}</div>
-        <div class="half bottom">${initialDigit}</div>
-        <div class="flip"><div class="half">${initialDigit}</div></div>
-        <div class="flip2"><div class="half">${initialDigit}</div></div>
+        <div class="top"><div class="face">${initialDigit}</div></div>
+        <div class="bottom"><div class="face">${initialDigit}</div></div>
+
+        <div class="flip-top"><div class="face">${initialDigit}</div></div>
+        <div class="flip-bottom"><div class="face">${initialDigit}</div></div>
       `;
       cardEl.dataset.value = initialDigit;
     }
@@ -240,27 +240,26 @@
       const prev = cardEl.dataset.value;
       if (prev === nextDigit) return;
 
-      // 애니메이션 준비: 위쪽이 prev에서 접히며 내려가고, 아래쪽이 next로 올라오게
-      const top = cardEl.querySelector('.top');
-      const bottom = cardEl.querySelector('.bottom');
-      const flip = cardEl.querySelector('.flip .half');
-      const flip2 = cardEl.querySelector('.flip2 .half');
+      const topFace = cardEl.querySelector('.top .face');
+      const bottomFace = cardEl.querySelector('.bottom .face');
+      const flipTopFace = cardEl.querySelector('.flip-top .face');
+      const flipBottomFace = cardEl.querySelector('.flip-bottom .face');
 
-      top.textContent = prev;
-      bottom.textContent = nextDigit;
-      flip.textContent = prev;
-      flip2.textContent = nextDigit;
+      // 고정면
+      topFace.textContent = prev;
+      bottomFace.textContent = nextDigit;
 
-      // 트리거
+      // 애니메이션면
+      flipTopFace.textContent = prev;
+      flipBottomFace.textContent = nextDigit;
+
       cardEl.classList.remove('run');
-      // reflow
-      void cardEl.offsetWidth;
+      void cardEl.offsetWidth; // reflow
       cardEl.classList.add('run');
 
-      // 애니메이션 끝나면 최종 숫자 고정
       setTimeout(() => {
-        top.textContent = nextDigit;
-        bottom.textContent = nextDigit;
+        topFace.textContent = nextDigit;
+        bottomFace.textContent = nextDigit;
         cardEl.dataset.value = nextDigit;
         cardEl.classList.remove('run');
       }, 280);
@@ -275,19 +274,17 @@
     document.getElementById('meta').textContent = TZ;
 
     function tick(){
-      const { hh, mm, ss } = getTimeParts();
-      const digits = (hh + mm + ss).split(''); // h1 h2 m1 m2 s1 s2
+      const { hh, mm } = getTimePartsHM();
+      const digits = (hh + mm).split(''); // h1 h2 m1 m2
       setDigit(cards.h1, digits[0]);
       setDigit(cards.h2, digits[1]);
       setDigit(cards.m1, digits[2]);
       setDigit(cards.m2, digits[3]);
-      setDigit(cards.s1, digits[4]);
-      setDigit(cards.s2, digits[5]);
     }
 
     tick();
-    // 초 경계에 최대한 맞춰 갱신
-    setInterval(tick, 250);
+    // 초 단위 필요 없으니 1초마다 체크만 (분 바뀔 때만 flip 됨)
+    setInterval(tick, 1000);
   </script>
 </body>
 </html>
