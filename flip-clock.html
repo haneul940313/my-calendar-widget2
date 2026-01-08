@@ -4,12 +4,21 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Flip Clock (HH:MM)</title>
+
   <style>
     :root{
-      --fg:#fff;
       --card:#111;
+      --fg:#fff;
       --line:#2a2a2a;
-      --muted:#bdbdbd;
+
+      /* 노션 배경이 흰색일 때 콜론이 잘 보이도록 */
+      --sep:#111;
+
+      --muted:#8b8b8b;
+
+      /* ✅ 유동형 크기: 폭은 줄이고, 높이는 더 길게 */
+      --cardW: clamp(52px, 10.5vw, 68px);
+      --cardH: calc(var(--cardW) * 1.85); /* 세로 길이 늘림 */
     }
 
     html, body{
@@ -22,97 +31,77 @@
     .wrap{
       width:100%;
       height:100%;
-      min-height: 130px;
+      min-height: 170px; /* 세로 여유(임베드에서 잘리지 않게) */
       display:flex;
       align-items:center;
       justify-content:center;
-      padding: 10px 0;
+      padding: 8px 0;
       box-sizing:border-box;
     }
 
     .clock{
       display:flex;
       align-items:center;
-      gap: 14px;
+      justify-content:center;
+      gap: 8px; /* ✅ 그룹 사이 간격 좁힘 */
       transform-origin:center;
     }
 
-    @media (max-width: 420px){
-      .clock{ transform: scale(0.92); }
-    }
-    @media (max-width: 360px){
-      .clock{ transform: scale(0.85); }
-    }
-
-    .digit-group{
+    .group{
       display:flex;
-      gap:10px;
+      gap: 6px; /* ✅ 카드 사이 간격 좁힘 */
       align-items:center;
     }
 
+    /* ✅ 콜론 확실히 보이게 + 간격 좁힘 */
     .sep{
-      color: var(--fg);
-      font-weight:700;
-      font-size: 46px;
+      font-size: calc(var(--cardH) * 0.42);
+      font-weight: 900;
       line-height: 1;
-      opacity: .9;
-      transform: translateY(-2px);
+      color: var(--sep);
       user-select:none;
+      margin: 0 2px; /* ✅ 콜론 주변 간격 좁힘 */
+      transform: translateY(-2px);
     }
 
-    /* ✅ 1카드=1숫자 (카드 안에 숫자 1개만 보이도록) */
+    /* ✅ 카드(1칸=1숫자) */
     .card{
-      width: 92px;
-      height: 120px;
+      width: var(--cardW);
+      height: var(--cardH);
       position: relative;
       border-radius: 14px;
       background: var(--card);
-      box-shadow: 0 10px 25px rgba(0,0,0,.28);
+      box-shadow: 0 10px 25px rgba(0,0,0,.22);
       overflow:hidden;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      perspective: 900px; /* flip 3D */
+      perspective: 900px;
+
+      --half: calc(var(--cardH) / 2);
+      --shift: calc(var(--half) / 2);
     }
 
-    /* 가운데 접히는 라인 */
     .card::after{
       content:"";
       position:absolute;
-      left:0;
-      right:0;
+      left:0; right:0;
       top:50%;
       height:1px;
       background: var(--line);
       transform: translateY(-0.5px);
-      z-index: 3;
+      z-index: 6;
     }
 
-    .face{
-      position:absolute;
-      inset:0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size: 70px;
-      font-weight: 800;
-      color: var(--fg);
-      letter-spacing: 1px;
-      user-select:none;
-      font-variant-numeric: tabular-nums;
-    }
-
-    /* 위/아래 하프는 "클립"으로 잘라서 보이게 함 */
     .top, .bottom{
       position:absolute;
-      left:0; right:0;
-      height:50%;
+      left:0;
+      width:100%;
+      height: var(--half);
       overflow:hidden;
       display:flex;
       align-items:center;
       justify-content:center;
       z-index: 2;
     }
+
     .top{
       top:0;
       background: rgba(255,255,255,0.02);
@@ -121,67 +110,64 @@
       bottom:0;
       background: rgba(0,0,0,0.06);
     }
-    .top .face{
-      transform: translateY(25%); /* 가운데 기준 맞춤 */
-    }
-    .bottom .face{
-      transform: translateY(-25%);
+
+    /* ✅ 숫자: 카드 크기에 따라 자동 스케일 */
+    .digit{
+      font-size: calc(var(--cardH) * 0.62);
+      font-weight: 900;
+      color: var(--fg);
+      letter-spacing: 0.5px;
+      font-variant-numeric: tabular-nums;
+      user-select:none;
+      line-height: 1;
+      position: relative;
     }
 
-    /* 플립 애니메이션 파트 */
-    .flip-top{
+    /* 상단/하단에서 숫자가 “한 개처럼” 보이도록 정렬 */
+    .top .digit { top: var(--shift); }
+    .bottom .digit { top: calc(var(--shift) * -1); }
+
+    /* 플립 레이어 */
+    .top-flip, .bottom-flip{
       position:absolute;
-      left:0; right:0;
-      top:0;
-      height:50%;
+      left:0;
+      width:100%;
+      height: var(--half);
       overflow:hidden;
-      transform-origin: bottom;
+      display:flex;
+      align-items:center;
+      justify-content:center;
       backface-visibility: hidden;
       z-index: 5;
-    }
-    .flip-top .face{
-      transform: translateY(25%);
+      pointer-events:none;
       background: var(--card);
     }
 
-    .flip-bottom{
-      position:absolute;
-      left:0; right:0;
+    .top-flip{
+      top:0;
+      transform-origin: bottom;
+      transform: rotateX(0deg);
+    }
+    .bottom-flip{
       bottom:0;
-      height:50%;
-      overflow:hidden;
       transform-origin: top;
       transform: rotateX(90deg);
-      backface-visibility: hidden;
-      z-index: 4;
-    }
-    .flip-bottom .face{
-      transform: translateY(-25%);
-      background: var(--card);
     }
 
-    @keyframes flipDown {
-      0%   { transform: rotateX(0deg); }
-      100% { transform: rotateX(-90deg); }
-    }
-    @keyframes flipUp {
-      0%   { transform: rotateX(90deg); }
-      100% { transform: rotateX(0deg); }
-    }
+    .top-flip .digit { top: var(--shift); }
+    .bottom-flip .digit { top: calc(var(--shift) * -1); }
 
-    .run .flip-top{
-      animation: flipDown 260ms ease-in forwards;
-    }
-    .run .flip-bottom{
-      animation: flipUp 260ms ease-out forwards;
-    }
+    @keyframes flipDown{ to { transform: rotateX(-90deg); } }
+    @keyframes flipUp{ to { transform: rotateX(0deg); } }
+
+    .flip .top-flip{ animation: flipDown 260ms ease-in forwards; }
+    .flip .bottom-flip{ animation: flipUp 260ms ease-out forwards; }
 
     .meta{
-      margin-top: 10px;
-      color: var(--muted);
-      font-size: 12px;
+      margin-top: 8px;
       text-align:center;
-      opacity: .9;
+      font-size: 12px;
+      color: var(--muted);
       user-select:none;
     }
   </style>
@@ -191,16 +177,14 @@
   <div class="wrap">
     <div>
       <div class="clock" id="clock">
-        <!-- HH -->
-        <div class="digit-group">
+        <div class="group">
           <div class="card" data-key="h1"></div>
           <div class="card" data-key="h2"></div>
         </div>
 
         <div class="sep">:</div>
 
-        <!-- MM -->
-        <div class="digit-group">
+        <div class="group">
           <div class="card" data-key="m1"></div>
           <div class="card" data-key="m2"></div>
         </div>
@@ -225,65 +209,61 @@
       return { hh, mm };
     }
 
-    function buildCard(cardEl, initialDigit){
-      cardEl.innerHTML = `
-        <div class="top"><div class="face">${initialDigit}</div></div>
-        <div class="bottom"><div class="face">${initialDigit}</div></div>
+    function buildCard(el, initial){
+      el.innerHTML = `
+        <div class="top"><div class="digit">${initial}</div></div>
+        <div class="bottom"><div class="digit">${initial}</div></div>
 
-        <div class="flip-top"><div class="face">${initialDigit}</div></div>
-        <div class="flip-bottom"><div class="face">${initialDigit}</div></div>
+        <div class="top-flip"><div class="digit">${initial}</div></div>
+        <div class="bottom-flip"><div class="digit">${initial}</div></div>
       `;
-      cardEl.dataset.value = initialDigit;
+      el.dataset.value = initial;
     }
 
-    function setDigit(cardEl, nextDigit){
-      const prev = cardEl.dataset.value;
-      if (prev === nextDigit) return;
+    function setDigit(el, next){
+      const prev = el.dataset.value;
+      if (prev === next) return;
 
-      const topFace = cardEl.querySelector('.top .face');
-      const bottomFace = cardEl.querySelector('.bottom .face');
-      const flipTopFace = cardEl.querySelector('.flip-top .face');
-      const flipBottomFace = cardEl.querySelector('.flip-bottom .face');
+      const topDigit = el.querySelector('.top .digit');
+      const bottomDigit = el.querySelector('.bottom .digit');
+      const topFlipDigit = el.querySelector('.top-flip .digit');
+      const bottomFlipDigit = el.querySelector('.bottom-flip .digit');
 
-      // 고정면
-      topFace.textContent = prev;
-      bottomFace.textContent = nextDigit;
+      topDigit.textContent = prev;
+      bottomDigit.textContent = next;
+      topFlipDigit.textContent = prev;
+      bottomFlipDigit.textContent = next;
 
-      // 애니메이션면
-      flipTopFace.textContent = prev;
-      flipBottomFace.textContent = nextDigit;
-
-      cardEl.classList.remove('run');
-      void cardEl.offsetWidth; // reflow
-      cardEl.classList.add('run');
+      el.classList.remove('flip');
+      void el.offsetWidth; // reflow
+      el.classList.add('flip');
 
       setTimeout(() => {
-        topFace.textContent = nextDigit;
-        bottomFace.textContent = nextDigit;
-        cardEl.dataset.value = nextDigit;
-        cardEl.classList.remove('run');
+        topDigit.textContent = next;
+        bottomDigit.textContent = next;
+        el.dataset.value = next;
+        el.classList.remove('flip');
       }, 280);
     }
 
-    // 초기 렌더
     const cards = {};
     document.querySelectorAll('.card').forEach(el => {
       cards[el.dataset.key] = el;
       buildCard(el, '0');
     });
+
     document.getElementById('meta').textContent = TZ;
 
     function tick(){
       const { hh, mm } = getTimePartsHM();
-      const digits = (hh + mm).split(''); // h1 h2 m1 m2
-      setDigit(cards.h1, digits[0]);
-      setDigit(cards.h2, digits[1]);
-      setDigit(cards.m1, digits[2]);
-      setDigit(cards.m2, digits[3]);
+      const d = (hh + mm).split(''); // h1 h2 m1 m2
+      setDigit(cards.h1, d[0]);
+      setDigit(cards.h2, d[1]);
+      setDigit(cards.m1, d[2]);
+      setDigit(cards.m2, d[3]);
     }
 
     tick();
-    // 초 단위 필요 없으니 1초마다 체크만 (분 바뀔 때만 flip 됨)
     setInterval(tick, 1000);
   </script>
 </body>
