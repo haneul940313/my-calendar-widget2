@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- original:https://codepen.io/boudra/pen/raErwP -->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -14,23 +13,22 @@
       font-family: Arial, sans-serif;
     }
 
-    /* Notion 임베드 폭에 맞춰 유동적으로 늘어나게 */
+    /* Notion 임베드 폭에 맞춰 유동 */
     #calendari {
       width: 100%;
-      position: relative; /* absolute 테이블의 기준 */
+      max-width: 520px;
+      margin: 0 auto;
       font-size: 14px;
     }
 
     table {
+      width: 100%;
       border-collapse: collapse;
       table-layout: fixed;
-      box-shadow: 0px 1px 3px rgba(0,0,0,0.2);
-      background-color: #fff;
 
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 100%;
+      /* 요청: 그림자 제거 */
+      box-shadow: none;
+      background-color: #fff;
     }
 
     td, th {
@@ -38,36 +36,42 @@
       background-color: #fff;
     }
 
-    th { padding: 10px; }
-
-    tr:first-child th {
+    /* 상단 타이틀(월/년) */
+    th.title {
+      position: relative;
+      padding: 12px 44px;
       font-size: 20px;
       font-weight: bold;
-      border-left: none;
-      border-top: none;
-    }
 
-    td:last-child, th:last-child { border-right: none; }
-
-    /* 헤더(블랙) */
-    th {
-      border-top: 1px solid rgba(0,0,0,0.1);
-      border-right: 1px solid rgba(0,0,0,0.1);
       background-color: #000;
       color: #fff;
+      border-top: 1px solid rgba(0,0,0,0.1);
+      border-right: 1px solid rgba(0,0,0,0.1);
       text-shadow: 0px -1px 0px rgba(0,0,0,0.2);
-      font-weight: normal;
     }
 
-    th .any {
+    th.title .any {
+      display: block;
       font-size: 12px;
       font-weight: normal;
-      display: block;
-      text-shadow: none;
       color: rgba(255,255,255,0.7);
+      text-shadow: none;
+      margin-top: 2px;
     }
 
-    tr:nth-child(2) th { padding: 5px; }
+    /* 요일 헤더 */
+    tr.weekdays th {
+      padding: 7px 0;
+      font-weight: normal;
+
+      background-color: #000;
+      color: #fff;
+      border-right: 1px solid rgba(255,255,255,0.08);
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    tr.weekdays th:last-child {
+      border-right: none;
+    }
 
     td {
       padding: 0;
@@ -80,17 +84,20 @@
       display: block;
       border: 2px solid transparent;
       transition: background 0.15s ease, color 0.15s ease;
+      user-select: none;
     }
 
-    td:nth-child(even) > span { background-color: rgba(0,0,0,0.02); }
+    td:nth-child(even) > span {
+      background-color: rgba(0,0,0,0.02);
+    }
 
-    /* 주말 색(블랙으로 통일) */
-    td:last-child > span,
-    td:nth-child(1) > span {
+    /* 주말 숫자 색(블랙) */
+    td:first-child > span,
+    td:last-child > span {
       color: #000;
     }
 
-    /* 오늘 날짜(블랙 배경) */
+    /* 오늘 */
     td.avui > span {
       font-weight: bold;
       background-color: #000;
@@ -98,37 +105,46 @@
       border: 2px solid rgba(0,0,0,0.1);
     }
 
-    td.fora > span { opacity: 0.2; }
+    /* 이번 달 아닌 날짜(흐리게) */
+    td.fora > span {
+      opacity: 0.2;
+    }
 
     td > span:hover {
       background: #000;
       color: #fff;
     }
 
+    /* 이전/다음 버튼 */
     .boto-next, .boto-prev {
-      background: rgba(0,0,0,0.12);
+      background: rgba(255,255,255,0.16);
       color: #fff;
-      font-family: inherit;
       border: none;
       font-size: 18px;
       font-weight: bold;
-      text-shadow: inherit;
-      padding: 2px 10px 5px 10px;
-      line-height: 1px;
+      padding: 0;
+      line-height: 1;
       height: 30px;
       width: 30px;
-      vertical-align: middle;
-      border-radius: 100%;
+      border-radius: 999px;
       position: absolute;
-      top: 15px;
+      top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
     }
+    .boto-prev { left: 10px; }
+    .boto-next { right: 10px; }
 
-    .boto-next { right: 10px; padding-left: 13px; }
-    .boto-prev { left: 10px; padding-right: 13px; }
-
-    .boto-next:hover, .boto-prev:hover { background: rgba(0,0,0,0.2); }
-    button:hover { cursor: pointer; }
-    button:focus { outline: none; }
+    .boto-next:hover,
+    .boto-prev:hover {
+      background: rgba(255,255,255,0.24);
+    }
+    .boto-next:focus,
+    .boto-prev:focus {
+      outline: none;
+    }
   </style>
 </head>
 
@@ -141,14 +157,8 @@
       'July','August','September','October','November','December'
     ];
 
-    // 일요일 시작 (Su, Mo, Tu, We, Th, Fr, Sa)
+    // 일요일 시작
     var dies_abr = ['Su','Mo','Tu','We','Th','Fr','Sa'];
-
-    Number.prototype.pad = function(num) {
-      var str = '';
-      for (var i = 0; i < (num - this.toString().length); i++) str += '0';
-      return str += this.toString();
-    };
 
     function sameDate(a, b) {
       return a.getFullYear() === b.getFullYear() &&
@@ -156,121 +166,93 @@
              a.getDate() === b.getDate();
     }
 
-    function calendari(widget, data) {
+    function renderCalendar(container, viewDate) {
+      container.innerHTML = '';
+
       var today = new Date();
+      var year = viewDate.getFullYear();
+      var month = viewDate.getMonth();
 
-      var original = widget.getElementsByClassName('actiu')[0];
-
-      if (typeof original === 'undefined') {
-        original = document.createElement('table');
-        original.setAttribute(
-          'data-actual',
-          data.getFullYear() + '/' +
-          data.getMonth().pad(2) + '/' +
-          data.getDate().pad(2)
-        );
-        widget.appendChild(original);
-      }
-
-      var diff = data - new Date(original.getAttribute('data-actual'));
-      diff = new Date(diff).getMonth();
-
-      var e = document.createElement('table');
-      e.className = diff === 0 ? 'amagat-esquerra' : 'amagat-dreta';
-      e.innerHTML = '';
-      widget.appendChild(e);
-
-      e.setAttribute(
-        'data-actual',
-        data.getFullYear() + '/' +
-        data.getMonth().pad(2) + '/' +
-        data.getDate().pad(2)
-      );
+      var table = document.createElement('table');
 
       // 타이틀 행
-      var fila = document.createElement('tr');
-      var titol = document.createElement('th');
-      titol.setAttribute('colspan', 7);
+      var trTitle = document.createElement('tr');
+      var thTitle = document.createElement('th');
+      thTitle.className = 'title';
+      thTitle.colSpan = 7;
 
-      var boto_prev = document.createElement('button');
-      boto_prev.className = 'boto-prev';
-      boto_prev.innerHTML = '&#9666;';
+      var btnPrev = document.createElement('button');
+      btnPrev.className = 'boto-prev';
+      btnPrev.innerHTML = '&#9666;';
 
-      var boto_next = document.createElement('button');
-      boto_next.className = 'boto-next';
-      boto_next.innerHTML = '&#9656;';
+      var btnNext = document.createElement('button');
+      btnNext.className = 'boto-next';
+      btnNext.innerHTML = '&#9656;';
 
-      titol.appendChild(boto_prev);
-      titol.appendChild(document.createElement('span')).innerHTML =
-        mesos[data.getMonth()] + '<span class="any">' + data.getFullYear() + '</span>';
-      titol.appendChild(boto_next);
+      var titleSpan = document.createElement('span');
+      titleSpan.innerHTML = mesos[month] + '<span class="any">' + year + '</span>';
 
-      boto_prev.onclick = function() {
-        data.setMonth(data.getMonth() - 1);
-        calendari(widget, data);
+      btnPrev.onclick = function() {
+        var d = new Date(viewDate);
+        d.setMonth(d.getMonth() - 1);
+        renderCalendar(container, d);
       };
 
-      boto_next.onclick = function() {
-        data.setMonth(data.getMonth() + 1);
-        calendari(widget, data);
+      btnNext.onclick = function() {
+        var d = new Date(viewDate);
+        d.setMonth(d.getMonth() + 1);
+        renderCalendar(container, d);
       };
 
-      fila.appendChild(titol);
-      e.appendChild(fila);
+      thTitle.appendChild(btnPrev);
+      thTitle.appendChild(titleSpan);
+      thTitle.appendChild(btnNext);
+      trTitle.appendChild(thTitle);
+      table.appendChild(trTitle);
 
-      // 요일 헤더 (일요일 시작)
-      fila = document.createElement('tr');
+      // 요일 행
+      var trWeek = document.createElement('tr');
+      trWeek.className = 'weekdays';
       for (var i = 0; i < 7; i++) {
-        fila.innerHTML += '<th>' + dies_abr[i] + '</th>';
+        var th = document.createElement('th');
+        th.textContent = dies_abr[i];
+        trWeek.appendChild(th);
       }
-      e.appendChild(fila);
+      table.appendChild(trWeek);
 
-      // 달력 첫 칸 계산: "일요일(0) 시작" 기준
-      var firstOfMonth = new Date(data.getFullYear(), data.getMonth(), 1);
-      var offset = firstOfMonth.getDay(); // 0=Sun ... 6=Sat
-      var actual = new Date(data.getFullYear(), data.getMonth(), 1 - offset);
+      // 달력 첫 칸(일요일 시작 기준)
+      var firstOfMonth = new Date(year, month, 1);
+      var offset = firstOfMonth.getDay(); // 0=Sun
+      var actual = new Date(year, month, 1 - offset);
 
-      // 6주 렌더링
-      for (var s = 0; s < 6; s++) {
-        var row = document.createElement('tr');
+      // 요청: 필요한 주까지만 렌더 (아래에 다음달 한 줄 더 생기는 것 제거)
+      while (true) {
+        var tr = document.createElement('tr');
 
         for (var d = 0; d < 7; d++) {
-          var cell = document.createElement('td');
+          var td = document.createElement('td');
           var span = document.createElement('span');
-          cell.appendChild(span);
+          span.textContent = actual.getDate();
 
-          span.innerHTML = actual.getDate();
+          if (actual.getMonth() !== month) td.className = 'fora';
+          if (sameDate(actual, today)) td.className = 'avui';
 
-          // 이번 달이 아닌 날짜 흐리게
-          if (actual.getMonth() !== data.getMonth()) cell.className = 'fora';
-
-          // 오늘 표시
-          if (sameDate(actual, today)) cell.className = 'avui';
+          td.appendChild(span);
+          tr.appendChild(td);
 
           actual.setDate(actual.getDate() + 1);
-          row.appendChild(cell);
         }
 
-        e.appendChild(row);
+        table.appendChild(tr);
+
+        // 한 주를 그리고 난 다음, "다음 주 시작이 일요일이고 그 날짜가 이번 달이 아니면" 종료
+        if (actual.getDay() === 0 && actual.getMonth() !== month) break;
       }
 
-      // 컨테이너 높이를 테이블 높이에 맞춰서 "유동형"으로
-      widget.style.height = e.offsetHeight + 'px';
-
-      setTimeout(function() {
-        e.className = 'actiu';
-        original.className += diff === 0 ? ' amagat-dreta' : ' amagat-esquerra';
-      }, 20);
-
-      original.className = 'inactiu';
-
-      setTimeout(function() {
-        var inactius = document.getElementsByClassName('inactiu');
-        for (var i = 0; i < inactius.length; i++) widget.removeChild(inactius[i]);
-      }, 300);
+      container.appendChild(table);
     }
 
-    calendari(document.getElementById('calendari'), new Date());
+    renderCalendar(document.getElementById('calendari'), new Date());
   </script>
 </body>
 </html>
